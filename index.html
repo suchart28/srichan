@@ -1,243 +1,323 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>Web Map Survey - ขอนแก่น (ถ.ศรีจันทร์)</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>ระบบสำรวจการใช้ประโยชน์ที่ดิน</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Sarabun', sans-serif; }
+        #map { height: 100vh; width: 100%; z-index: 1; }
+        
+        /* ปุ่มเปิดฟอร์มสำรวจ (Floating Action Button) */
+        .fab-btn {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 60px;
+            font-size: 30px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            z-index: 1000;
+            cursor: pointer;
+            border: none;
+        }
 
-<!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<!-- MarkerCluster -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-<!-- FontAwesome + AwesomeMarkers -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.awesome-markers/2.0.5/leaflet.awesome-markers.css"/>
+        /* Modal Form Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        .btn { flex: 1; padding: 10px; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-locate { background-color: #28a745; color: white; margin-top: 5px; width: 100%; }
 
-<style>
-html, body, #map { height:100%; margin:0; padding:0; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans","Helvetica Neue",Arial; }
-.controls { position:absolute; top:12px; left:12px; z-index:1400; display:flex; gap:8px; flex-direction:column; }
-.btn { background: #1976d2; color:#fff; padding:10px 12px; border-radius:10px; border:none; font-weight:600; }
-.btn.secondary { background:#fff; color:#222; border:1px solid #ccc; }
-.legend { position:absolute; right:12px; bottom:12px; z-index:1400; background:#fff; padding:8px 10px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,.12); font-size:13px; }
-.legend .row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
-.colorbox { width:14px; height:14px; border-radius:4px; }
-.sheet { position:absolute; left:0; right:0; bottom:0; z-index:1500; background:#fff; max-height:78%; border-top-left-radius:12px; border-top-right-radius:12px; box-shadow:0 -6px 20px rgba(0,0,0,0.15); transform: translateY(110%); transition: transform .25s ease; overflow:auto; }
-.sheet.open { transform: translateY(0%); }
-.sheet .header { padding:12px 16px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; }
-.sheet .content { padding:12px 16px; }
-label { display:block; font-weight:600; margin-top:8px; }
-input[type=text], textarea, select { width:100%; padding:8px 10px; border-radius:8px; border:1px solid #ddd; margin-top:6px; box-sizing:border-box; }
-#miniMap { height:220px; border-radius:8px; margin-top:8px; }
-</style>
+        /* Custom Popup */
+        .popup-content b { color: #007bff; }
+    </style>
 </head>
 <body>
-<div id="map"></div>
 
-<div class="controls">
-  <button id="toggleSatellite" class="btn secondary">เปิดภาพถ่ายดาวเทียม</button>
-  <button id="openForm" class="btn">สำรวจพื้นที่</button>
-  <select id="filterType" class="btn secondary">
-    <option value="">ทุกประเภท</option>
-    <option value="shop">ร้านค้า/ร้านอาหาร</option>
-    <option value="service">สถานบริการ</option>
-    <option value="house_open">บ้านพักเปิด</option>
-    <option value="house_closed">บ้านพักปิด</option>
-    <option value="vacant">พื้นที่รกร้าง</option>
-    <option value="empty_land">ที่ดินเปล่า</option>
-  </select>
-  <input type="text" id="searchName" class="btn secondary" placeholder="ค้นหาชื่อสถานที่...">
-</div>
+    <div id="map"></div>
+    
+    <button class="fab-btn" onclick="openForm()">+</button>
 
-<div class="legend">
-  <div style="font-weight:700; margin-bottom:6px;">ประเภทสถานที่</div>
-  <div class="row"><div class="colorbox" style="background:red"></div>ร้านค้า/ร้านอาหาร</div>
-  <div class="row"><div class="colorbox" style="background:orange"></div>สถานบริการ</div>
-  <div class="row"><div class="colorbox" style="background:green"></div>บ้านพักเปิด/ปิด</div>
-  <div class="row"><div class="colorbox" style="background:blue"></div>พื้นที่รกร้าง/ที่ดินเปล่า</div>
-</div>
+    <div id="modalForm" class="modal">
+        <div class="modal-content">
+            <h3>แบบสำรวจการใช้ประโยชน์ที่ดิน</h3>
+            
+            <div class="form-group">
+                <label>พิกัด (ลากหมุดสีแดงเพื่อปรับ)</label>
+                <div id="latlng-display" style="font-size:0.8em; color:gray;">ยังไม่ได้ระบุ</div>
+                <button class="btn btn-locate" onclick="getCurrentLocation()">📍 ใช้พิกัดปัจจุบัน</button>
+            </div>
 
-<!-- Bottom sheet form -->
-<div id="sheet" class="sheet" role="dialog" aria-hidden="true">
-  <div class="header">
-    <div style="font-weight:800">ฟอร์มสำรวจการใช้ประโยชน์ที่ดิน</div>
-    <button id="closeForm" class="btn secondary">ปิด</button>
-  </div>
-  <div class="content">
-    <label>ชื่อสถานที่</label>
-    <input id="placeName" type="text" placeholder="ตัวอย่าง: ร้านกาแฟ ซอย 2" />
-    <label>ประเภทสถานที่</label>
-    <select id="placeType">
-      <option value="shop">ร้านค้า/ร้านอาหาร</option>
-      <option value="service">สถานบริการ</option>
-      <option value="house_open">บ้านพักเปิด</option>
-      <option value="house_closed">บ้านพักปิด</option>
-      <option value="vacant">พื้นที่รกร้าง</option>
-      <option value="empty_land">ที่ดินเปล่า</option>
-    </select>
-    <label>รายละเอียด</label>
-    <textarea id="details" rows="4" placeholder="บรรยายการใช้ประโยชน์ของพื้นที่"></textarea>
-    <label>รูปภาพ (ถ้ามี)</label>
-    <input type="file" id="placeImage" accept="image/*"/>
-    <div style="display:flex; gap:8px; margin-top:8px;">
-      <button id="useLocation" class="btn secondary" style="flex:1">ใช้พิกัดปัจจุบัน</button>
-      <button id="placeByTap" class="btn" style="flex:1">แตะแผนที่เพื่อตั้งพิกัด</button>
+            <div class="form-group">
+                <label>ประเภทสถานที่</label>
+                <select id="placeType">
+                    <option value="shop">ร้านค้า</option>
+                    <option value="restaurant">ร้านอาหาร</option>
+                    <option value="service">สถานบริการ</option>
+                    <option value="residential">บ้านพักอาศัย</option>
+                    <option value="wasteland">พื้นที่รกร้าง</option>
+                    <option value="vacant">ที่ดินเปล่า</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>รายละเอียด</label>
+                <textarea id="details" rows="3" placeholder="เช่น ขายก๋วยเตี๋ยว, ตึกแถว 3 ชั้น"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>สถานะ</label>
+                <select id="status">
+                    <option value="Open">เปิดใช้งาน</option>
+                    <option value="Closed">ปิด/เลิกกิจการ</option>
+                </select>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="closeForm()">ยกเลิก</button>
+                <button class="btn btn-primary" onclick="submitForm()">บันทึกข้อมูล</button>
+            </div>
+        </div>
     </div>
-    <div id="miniMap"></div>
-    <div style="display:flex; gap:8px; margin-top:12px;">
-      <button id="saveSurvey" class="btn" style="flex:1">ส่งข้อมูล</button>
-      <button id="resetMarker" class="btn secondary" style="flex:1">ยกเลิกพิกัด</button>
-    </div>
-    <div style="margin-top:12px; font-size:13px; color:#666">(หมุดสามารถลากได้เพื่อปรับตำแหน่งก่อนส่ง)</div>
-  </div>
-</div>
 
-<!-- Leaflet JS + MarkerCluster + AwesomeMarkers -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.awesome-markers/2.0.5/leaflet.awesome-markers.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // --- 1. การตั้งค่า URL (ใส่ URL ของคุณที่นี่) ---
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxKJ_kAK7tDqM3mMXLy-P5Eid-0mLz64-jBvlXPr6jwEuCPUFC8VR8pzUrxgJuOTGdg/exec'; 
 
-<!-- Firebase -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-storage.js";
+        // --- 2. การตั้งค่าแผนที่ ---
+        // พิกัดถนนศรีจันทร์ ขอนแก่น
+        const centerPoint = [16.426, 102.835]; 
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDGYuI3yxJbUTc6T_0pm6WiEKZul11tXS0",
-  authDomain: "suchartwork-1487382986748.firebaseapp.com",
-  databaseURL: "https://suchartwork-1487382986748.firebaseio.com",
-  projectId: "suchartwork-1487382986748",
-  storageBucket: "suchartwork-1487382986748.firebasestorage.app",
-  messagingSenderId: "353884592527",
-  appId: "1:353884592527:web:a96e6e28d8371ba6eb13fa"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const storage = getStorage(app);
+        const map = L.map('map', {
+            center: centerPoint,
+            zoom: 16,
+            zoomControl: false // ย้ายไปใส่ custom หรือใช้มือถือ pinch zoom
+        });
 
-// --- Map Setup ---
-const centerLatLng=[16.4325,102.8275], initialZoom=16;
-const map = L.map('map',{zoomControl:true}).setView(centerLatLng, initialZoom);
+        // Layer: แผนที่ฐานแบบ Clean (CartoDB Positron No Labels) - ไม่มีตัวหนังสือ เน้นรูปแปลง/อาคาร
+        const cleanMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy;OpenStreetMap, &copy;CartoDB',
+            maxZoom: 20
+        }).addTo(map);
 
-// Base maps
-const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});
+        // Layer: แผนที่ภาพถ่ายดาวเทียม (Esri World Imagery)
+        const satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri'
+        });
 
-// WMS overlays
-const cadastralWMS = L.tileLayer.wms("http://110.164.49.68:8081/geoserver/WMSDOL/wms",{
-  layers:'WMSDOL:parcel', format:'image/png', transparent:true, attribution:'กรมที่ดิน'
-}).addTo(map);
+        // ตัวควบคุมการเปิด/ปิด Layer
+        const baseMaps = {
+            "แผนที่ลายเส้น (Clean)": cleanMap,
+            "ภาพถ่ายดาวเทียม": satelliteMap
+        };
+        L.control.layers(baseMaps).addTo(map);
+        L.control.zoom({ position: 'topright' }).addTo(map);
 
-const buildingsWMS = L.tileLayer.wms("http://110.164.49.68:8081/geoserver/WMSDOL/wms",{
-  layers:'WMSDOL:building', format:'image/png', transparent:true, attribution:'กรมที่ดิน'
-});
+        // --- 3. ตัวแปรสำหรับจัดการหมุดสำรวจ ---
+        let tempMarker = null; // หมุดชั่วคราวตอนกรอกฟอร์ม
+        let allMarkers = L.layerGroup().addTo(map);
 
-// Layer Control
-const baseMaps = { "ถนน (OSM)": osm, "ภาพถ่ายดาวเทียม": satellite };
-const overlayMaps = { "แปลงที่ดิน": cadastralWMS, "อาคาร": buildingsWMS };
-L.control.layers(baseMaps, overlayMaps, {position:'topright', collapsed:true}).addTo(map);
+        // สีตามประเภทสถานที่
+        const typeColors = {
+            'shop': '#3498db',      // ฟ้า
+            'restaurant': '#e67e22', // ส้ม
+            'service': '#9b59b6',   // ม่วง
+            'residential': '#2ecc71',// เขียว
+            'wasteland': '#7f8c8d', // เทา
+            'vacant': '#95a5a6'     // เทาอ่อน
+        };
 
-// Satellite toggle
-let satelliteOn=false;
-document.getElementById('toggleSatellite').addEventListener('click',()=>{
-  satelliteOn=!satelliteOn;
-  if(satelliteOn){ map.addLayer(satellite); document.getElementById('toggleSatellite').textContent='ปิดภาพถ่ายดาวเทียม'; document.getElementById('toggleSatellite').classList.remove('secondary'); }
-  else { map.removeLayer(satellite); document.getElementById('toggleSatellite').textContent='เปิดภาพถ่ายดาวเทียม'; document.getElementById('toggleSatellite').classList.add('secondary'); }
-});
+        // --- 4. ฟังก์ชันโหลดข้อมูลจาก Google Sheet ---
+        function loadData() {
+            fetch(SCRIPT_URL)
+            .then(response => response.json())
+            .then(data => {
+                allMarkers.clearLayers(); // ล้างหมุดเก่า
+                data.forEach(row => {
+                    // row format: [Timestamp, Lat, Lng, Type, Details, Status]
+                    const lat = parseFloat(row[1]);
+                    const lng = parseFloat(row[2]);
+                    const type = row[3];
+                    const details = row[4];
+                    const status = row[5];
 
-// MarkerCluster
-const markersCluster = L.markerClusterGroup({chunkedLoading:true});
-map.addLayer(markersCluster);
+                    if(!isNaN(lat)) {
+                        const color = typeColors[type] || 'red';
+                        
+                        // สร้าง Circle Marker
+                        const marker = L.circleMarker([lat, lng], {
+                            radius: 8,
+                            fillColor: color,
+                            color: "#fff",
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        });
 
-// Type color
-const typeColors={shop:'red',service:'orange',house_open:'green',house_closed:'darkgreen',vacant:'blue',empty_land:'gray'};
-function colorNameFromType(t){ return typeColors[t]||'purple'; }
+                        // Popup แสดงรายละเอียด
+                        const popupContent = `
+                            <div class="popup-content">
+                                <b>ประเภท:</b> ${getTypeName(type)}<br>
+                                <b>สถานะ:</b> ${status === 'Open' ? '<span style="color:green">เปิด</span>' : '<span style="color:red">ปิด</span>'}<br>
+                                <b>รายละเอียด:</b> ${details}<br>
+                                <hr>
+                                <small><i>อัพเดทล่าสุดเมื่อส่งข้อมูลใหม่ทับจุดเดิม</i></small>
+                            </div>
+                        `;
+                        marker.bindPopup(popupContent);
+                        allMarkers.addLayer(marker);
+                    }
+                });
+            })
+            .catch(err => console.error("Error loading data:", err));
+        }
 
-// Render surveys
-async function renderSurveys(searchTerm=''){
-  markersCluster.clearLayers();
-  const typeFilter = document.getElementById('filterType')?.value || '';
-  const q = query(collection(db,"surveys"), orderBy('ts','desc'));
-  const snapshot = await getDocs(q);
-  snapshot.forEach(doc=>{
-    const s=doc.data();
-    if(typeFilter && s.type!==typeFilter) return;
-    if(searchTerm && (!s.name || !s.name.toLowerCase().includes(searchTerm.toLowerCase()))) return;
-    const icon=L.AwesomeMarkers.icon({icon:'map-marker', prefix:'fa', markerColor:colorNameFromType(s.type)});
-    const m=L.marker([s.lat,s.lng],{icon});
-    let popupHtml=`<b>${s.name||'ไม่มีชื่อ'}</b><br/><small>${s.type}</small><br/>${s.details||''}<br/><small>${new Date(s.ts).toLocaleString()} | ${s.user||'ไม่ระบุ'}</small>`;
-    if(s.imageUrl) popupHtml+=`<br/><img src="${s.imageUrl}" style="width:100%;margin-top:4px;border-radius:4px;">`;
-    m.bindPopup(popupHtml);
-    markersCluster.addLayer(m);
-  });
-}
+        function getTypeName(typeKey) {
+            const names = {
+                'shop': 'ร้านค้า', 'restaurant': 'ร้านอาหาร', 'service': 'สถานบริการ',
+                'residential': 'บ้านพัก', 'wasteland': 'พื้นที่รกร้าง', 'vacant': 'ที่ดินเปล่า'
+            };
+            return names[typeKey] || typeKey;
+        }
 
-// Initial render
-renderSurveys();
+        // โหลดข้อมูลเมื่อเปิดเว็บ
+        loadData();
 
-// Filter / Search events
-document.getElementById('filterType').addEventListener('change',()=>renderSurveys(document.getElementById('searchName').value));
-document.getElementById('searchName').addEventListener('input',()=>renderSurveys(document.getElementById('searchName').value));
+        // --- 5. ฟังก์ชันจัดการฟอร์มและการสำรวจ ---
+        
+        function openForm() {
+            // สร้างหมุดกลางหน้าจอถ้ายังไม่มี
+            const center = map.getCenter();
+            createTempMarker(center.lat, center.lng);
+            document.getElementById('modalForm').style.display = 'flex';
+        }
 
-// --- Form & MiniMap ---
-const sheet=document.getElementById('sheet');
-const openFormBtn=document.getElementById('openForm');
-const closeFormBtn=document.getElementById('closeForm');
-openFormBtn.addEventListener('click',()=>{ sheet.classList.add('open'); sheet.setAttribute('aria-hidden','false'); setTimeout(()=> miniMap.invalidateSize(),300); });
-closeFormBtn.addEventListener('click',()=>{ sheet.classList.remove('open'); sheet.setAttribute('aria-hidden','true'); resetEditorMarker(); });
+        function closeForm() {
+            document.getElementById('modalForm').style.display = 'none';
+            if (tempMarker) {
+                map.removeLayer(tempMarker);
+                tempMarker = null;
+            }
+        }
 
-const miniMap=L.map('miniMap',{attributionControl:false, zoomControl:false}).setView(centerLatLng, initialZoom);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(miniMap);
+        function createTempMarker(lat, lng) {
+            if (tempMarker) map.removeLayer(tempMarker);
+            
+            // สร้างหมุด Draggable (ลากได้)
+            tempMarker = L.marker([lat, lng], { draggable: true }).addTo(map);
+            
+            updateLatLngDisplay(lat, lng);
 
-let editorMarker=null;
-function placeEditorMarker(latlng){ if(editorMarker) editorMarker.setLatLng(latlng); else editorMarker=L.marker(latlng,{draggable:true}).addTo(miniMap); miniMap.setView(latlng,18);}
-function resetEditorMarker(){ if(editorMarker){ miniMap.removeLayer(editorMarker); editorMarker=null; } document.getElementById('placeName').value=''; document.getElementById('details').value=''; document.getElementById('placeType').value='shop'; document.getElementById('placeImage').value='';}
+            tempMarker.on('dragend', function(e) {
+                const coord = e.target.getLatLng();
+                updateLatLngDisplay(coord.lat, coord.lng);
+            });
+        }
 
-// Use current location
-document.getElementById('useLocation').addEventListener('click',()=>{
-  if(!navigator.geolocation){ alert('ไม่รองรับ'); return; }
-  navigator.geolocation.getCurrentPosition(pos=>placeEditorMarker([pos.coords.latitude,pos.coords.longitude]));
-});
+        function updateLatLngDisplay(lat, lng) {
+            document.getElementById('latlng-display').innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        }
 
-// Place marker by tap on main map
-let placeByTapMode=false;
-document.getElementById('placeByTap').addEventListener('click',()=>{
-  placeByTapMode=!placeByTapMode;
-  document.getElementById('placeByTap').textContent=placeByTapMode?'แตะแผนที่: เปิด':'แตะแผนที่เพื่อตั้งพิกัด';
-  map.getContainer().style.cursor=placeByTapMode?'crosshair':'';
-  if(placeByTapMode) alert('แตะบนแผนที่เพื่อเลือกพิกัด (กดปุ่มอีกครั้งเพื่อยกเลิก)');
-});
-map.on('click',e=>{
-  if(placeByTapMode){ placeByTapMode=false; document.getElementById('placeByTap').textContent='แตะแผนที่เพื่อตั้งพิกัด'; map.getContainer().style.cursor=''; placeEditorMarker([e.latlng.lat,e.latlng.lng]); if(!sheet.classList.contains('open')){ sheet.classList.add('open'); sheet.setAttribute('aria-hidden','false'); setTimeout(()=> miniMap.invalidateSize(),300); } }
-});
+        function getCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    map.setView([lat, lng], 18);
+                    createTempMarker(lat, lng);
+                }, () => {
+                    alert('ไม่สามารถระบุพิกัดได้ กรุณาเปิด GPS');
+                });
+            } else {
+                alert('เบราว์เซอร์นี้ไม่รองรับ GPS');
+            }
+        }
 
-// Save survey
-document.getElementById('saveSurvey').addEventListener('click', async()=>{
-  const name=document.getElementById('placeName').value.trim();
-  const details=document.getElementById('details').value.trim();
-  const type=document.getElementById('placeType').value;
-  if(!editorMarker){ alert('กรุณาเลือกพิกัด'); return; }
-  const latlng=editorMarker.getLatLng();
-  const ts=Date.now();
+        function submitForm() {
+            if (!tempMarker) {
+                alert('กรุณาระบุพิกัด');
+                return;
+            }
 
-  let imageUrl='';
-  const fileInput=document.getElementById('placeImage');
-  if(fileInput?.files.length>0){
-    const file=fileInput.files[0];
-    const storageRef=ref(storage, `survey_images/${ts}_${file.name}`);
-    await uploadBytes(storageRef,file);
-    imageUrl=await getDownloadURL(storageRef);
-  }
+            const latLng = tempMarker.getLatLng();
+            const formData = {
+                lat: latLng.lat,
+                lng: latLng.lng,
+                type: document.getElementById('placeType').value,
+                details: document.getElementById('details').value,
+                status: document.getElementById('status').value
+            };
 
-  await addDoc(collection(db,"surveys"),{name,details,type,lat:latlng.lat,lng:latlng.lng,ts,user:'ผู้สำรวจ',imageUrl});
-  renderSurveys();
-  editorMarker.remove(); editorMarker=null;
-  sheet.classList.remove('open'); sheet.setAttribute('aria-hidden','true'); resetEditorMarker();
-});
+            // แสดง Loading หรือปิดปุ่ม (Optional)
+            const btn = document.querySelector('.btn-primary');
+            const originalText = btn.innerText;
+            btn.innerText = 'กำลังบันทึก...';
+            btn.disabled = true;
 
-// Reset marker
-document.getElementById('resetMarker').addEventListener('click',()=>resetEditorMarker());
-</script>
+            // ส่งข้อมูลไป Google Apps Script
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors', // สำคัญสำหรับ Google Apps Script Web App
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            }).then(() => {
+                alert('บันทึกข้อมูลเรียบร้อย!');
+                closeForm();
+                loadData(); // โหลดหมุดใหม่
+                
+                // Reset form
+                document.getElementById('details').value = '';
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }).catch(err => {
+                console.error(err);
+                alert('เกิดข้อผิดพลาดในการบันทึก');
+                btn.innerText = originalText;
+                btn.disabled = false;
+            });
+        }
+
+        // คลิกนอก Modal เพื่อปิด
+        window.onclick = function(event) {
+            const modal = document.getElementById('modalForm');
+            if (event.target == modal) {
+                closeForm();
+            }
+        }
+    </script>
 </body>
 </html>
