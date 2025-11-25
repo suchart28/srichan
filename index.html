@@ -107,7 +107,15 @@
     };
 
     // --- Map setup ---
-    const map = L.map('map', { zoomControl:false }).setView(defaultCenter, defaultZoom);
+    const map = L.map('map').setView([16.4288, 102.85056], 17);
+
+// เพิ่มชั้นแปลงที่ดินกรมที่ดิน ให้แสดงตลอด
+const cadastralLayer = L.tileLayer.wms("http://110.164.49.68:8081/geoserver/WMSDOL/wms", {
+  layers: "WMSDOL:parcel",
+  format: "image/png",
+  transparent: true,
+  opacity: 0.6
+}).addTo(map);
 
     // satellite imagery (Esri) plus transparent OSM overlay for place labels
     const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
