@@ -1,157 +1,243 @@
 <!doctype html>
 <html lang="th">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
-  <title>Web Map Survey - ขอนแก่น (ถ.ศรีจันทร์)</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Web Map Survey - ขอนแก่น (ถ.ศรีจันทร์)</title>
 
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<!-- MarkerCluster -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<!-- FontAwesome + AwesomeMarkers -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.awesome-markers/2.0.5/leaflet.awesome-markers.css"/>
 
-  <style>
-    html,body,#map { height:100%; margin:0; padding:0; }
-    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial; }
-    .controls { position: absolute; top:12px; left:12px; z-index:1400; display:flex; gap:8px; flex-direction:column; }
-    .btn { background: #1976d2; color: #fff; padding:10px 12px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.2); border:none; font-weight:600; }
-    .btn.secondary { background:#fff; color:#222; border:1px solid #ccc; }
-    .sheet { position: absolute; left:0; right:0; bottom:0; z-index:1500; background:#fff; max-height:78%; border-top-left-radius:12px; border-top-right-radius:12px; box-shadow:0 -6px 20px rgba(0,0,0,0.15); transform: translateY(110%); transition: transform .25s ease; overflow:auto; }
-    .sheet.open { transform: translateY(0%); }
-    .sheet .header { padding:12px 16px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; }
-    .sheet .content { padding:12px 16px; }
-    label { display:block; font-weight:600; margin-top:8px; }
-    input[type=text], textarea, select { width:100%; padding:8px 10px; border-radius:8px; border:1px solid #ddd; margin-top:6px; box-sizing:border-box; }
-    #miniMap { height:220px; border-radius:8px; margin-top:8px; }
-    .legend { position:absolute; right:12px; bottom:12px; z-index:1400; background:#fff; padding:8px 10px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,.12); font-size:13px; }
-    .legend .row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
-    .colorbox { width:14px; height:14px; border-radius:4px; }
-    @media(min-width:900px){ .controls { left:18px; top:18px; } .sheet{ max-width:540px; left:50%; transform:translateX(-50%) translateY(110%);} .sheet.open{ transform:translateX(-50%) translateY(0%);} }
-  </style>
+<style>
+html, body, #map { height:100%; margin:0; padding:0; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans","Helvetica Neue",Arial; }
+.controls { position:absolute; top:12px; left:12px; z-index:1400; display:flex; gap:8px; flex-direction:column; }
+.btn { background: #1976d2; color:#fff; padding:10px 12px; border-radius:10px; border:none; font-weight:600; }
+.btn.secondary { background:#fff; color:#222; border:1px solid #ccc; }
+.legend { position:absolute; right:12px; bottom:12px; z-index:1400; background:#fff; padding:8px 10px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,.12); font-size:13px; }
+.legend .row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.colorbox { width:14px; height:14px; border-radius:4px; }
+.sheet { position:absolute; left:0; right:0; bottom:0; z-index:1500; background:#fff; max-height:78%; border-top-left-radius:12px; border-top-right-radius:12px; box-shadow:0 -6px 20px rgba(0,0,0,0.15); transform: translateY(110%); transition: transform .25s ease; overflow:auto; }
+.sheet.open { transform: translateY(0%); }
+.sheet .header { padding:12px 16px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; }
+.sheet .content { padding:12px 16px; }
+label { display:block; font-weight:600; margin-top:8px; }
+input[type=text], textarea, select { width:100%; padding:8px 10px; border-radius:8px; border:1px solid #ddd; margin-top:6px; box-sizing:border-box; }
+#miniMap { height:220px; border-radius:8px; margin-top:8px; }
+</style>
 </head>
 <body>
-  <div id="map"></div>
+<div id="map"></div>
 
-  <div class="controls">
-    <button id="toggleSatellite" class="btn secondary">เปิดภาพถ่ายดาวเทียม</button>
-    <button id="openForm" class="btn">สำรวจพื้นที่</button>
+<div class="controls">
+  <button id="toggleSatellite" class="btn secondary">เปิดภาพถ่ายดาวเทียม</button>
+  <button id="openForm" class="btn">สำรวจพื้นที่</button>
+  <select id="filterType" class="btn secondary">
+    <option value="">ทุกประเภท</option>
+    <option value="shop">ร้านค้า/ร้านอาหาร</option>
+    <option value="service">สถานบริการ</option>
+    <option value="house_open">บ้านพักเปิด</option>
+    <option value="house_closed">บ้านพักปิด</option>
+    <option value="vacant">พื้นที่รกร้าง</option>
+    <option value="empty_land">ที่ดินเปล่า</option>
+  </select>
+  <input type="text" id="searchName" class="btn secondary" placeholder="ค้นหาชื่อสถานที่...">
+</div>
+
+<div class="legend">
+  <div style="font-weight:700; margin-bottom:6px;">ประเภทสถานที่</div>
+  <div class="row"><div class="colorbox" style="background:red"></div>ร้านค้า/ร้านอาหาร</div>
+  <div class="row"><div class="colorbox" style="background:orange"></div>สถานบริการ</div>
+  <div class="row"><div class="colorbox" style="background:green"></div>บ้านพักเปิด/ปิด</div>
+  <div class="row"><div class="colorbox" style="background:blue"></div>พื้นที่รกร้าง/ที่ดินเปล่า</div>
+</div>
+
+<!-- Bottom sheet form -->
+<div id="sheet" class="sheet" role="dialog" aria-hidden="true">
+  <div class="header">
+    <div style="font-weight:800">ฟอร์มสำรวจการใช้ประโยชน์ที่ดิน</div>
+    <button id="closeForm" class="btn secondary">ปิด</button>
   </div>
-
-  <div class="legend" aria-hidden>
-    <div style="font-weight:700; margin-bottom:6px;">ประเภทสถานที่</div>
-    <div class="row"><div class="colorbox" style="background:#e53935"></div>ร้านค้า/ร้านอาหาร</div>
-    <div class="row"><div class="colorbox" style="background:#FB8C00"></div>สถานบริการ</div>
-    <div class="row"><div class="colorbox" style="background:#43A047"></div>บ้านพักเปิด/ปิด</div>
-    <div class="row"><div class="colorbox" style="background:#5C6BC0"></div>พื้นที่รกร้าง/ที่ดินเปล่า</div>
-  </div>
-
-  <div id="sheet" class="sheet" role="dialog" aria-hidden="true">
-    <div class="header">
-      <div style="font-weight:800">ฟอร์มสำรวจการใช้ประโยชน์ที่ดิน</div>
-      <button id="closeForm" class="btn secondary">ปิด</button>
+  <div class="content">
+    <label>ชื่อสถานที่</label>
+    <input id="placeName" type="text" placeholder="ตัวอย่าง: ร้านกาแฟ ซอย 2" />
+    <label>ประเภทสถานที่</label>
+    <select id="placeType">
+      <option value="shop">ร้านค้า/ร้านอาหาร</option>
+      <option value="service">สถานบริการ</option>
+      <option value="house_open">บ้านพักเปิด</option>
+      <option value="house_closed">บ้านพักปิด</option>
+      <option value="vacant">พื้นที่รกร้าง</option>
+      <option value="empty_land">ที่ดินเปล่า</option>
+    </select>
+    <label>รายละเอียด</label>
+    <textarea id="details" rows="4" placeholder="บรรยายการใช้ประโยชน์ของพื้นที่"></textarea>
+    <label>รูปภาพ (ถ้ามี)</label>
+    <input type="file" id="placeImage" accept="image/*"/>
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button id="useLocation" class="btn secondary" style="flex:1">ใช้พิกัดปัจจุบัน</button>
+      <button id="placeByTap" class="btn" style="flex:1">แตะแผนที่เพื่อตั้งพิกัด</button>
     </div>
-    <div class="content">
-      <label>ชื่อสถานที่</label>
-      <input id="placeName" type="text" placeholder="ตัวอย่าง: ร้านกาแฟ ซอย 2" />
-
-      <label>ประเภทสถานที่</label>
-      <select id="placeType">
-        <option value="shop">ร้านค้า/ร้านอาหาร</option>
-        <option value="service">สถานบริการ</option>
-        <option value="house_open">บ้านพักเปิด</option>
-        <option value="house_closed">บ้านพักปิด</option>
-        <option value="vacant">พื้นที่รกร้าง</option>
-        <option value="empty_land">ที่ดินเปล่า</option>
-      </select>
-
-      <label>รายละเอียด</label>
-      <textarea id="details" rows="4" placeholder="บรรยายการใช้ประโยชน์ของพื้นที่"></textarea>
-
-      <div style="display:flex; gap:8px; margin-top:8px;">
-        <button id="useLocation" class="btn secondary" style="flex:1">ใช้พิกัดปัจจุบัน</button>
-        <button id="placeByTap" class="btn" style="flex:1">แตะแผนที่เพื่อตั้งพิกัด</button>
-      </div>
-
-      <div id="miniMap"></div>
-
-      <div style="display:flex; gap:8px; margin-top:12px;">
-        <button id="saveSurvey" class="btn" style="flex:1">ส่งข้อมูล</button>
-        <button id="resetMarker" class="btn secondary" style="flex:1">ยกเลิกพิกัด</button>
-      </div>
-      <div style="margin-top:12px; font-size:13px; color:#666">(หมุดสามารถลากได้เพื่อปรับตำแหน่งก่อนส่ง)</div>
+    <div id="miniMap"></div>
+    <div style="display:flex; gap:8px; margin-top:12px;">
+      <button id="saveSurvey" class="btn" style="flex:1">ส่งข้อมูล</button>
+      <button id="resetMarker" class="btn secondary" style="flex:1">ยกเลิกพิกัด</button>
     </div>
+    <div style="margin-top:12px; font-size:13px; color:#666">(หมุดสามารถลากได้เพื่อปรับตำแหน่งก่อนส่ง)</div>
   </div>
+</div>
 
-  <!-- Leaflet JS loaded after DOM -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function(){
-      const centerLatLng = [16.4325, 102.8275];
-      const initialZoom = 16;
-      const typeColors = { shop:'#e53935', service:'#FB8C00', house_open:'#43A047', house_closed:'#2e7d32', vacant:'#5C6BC0', empty_land:'#546E7A' };
+<!-- Leaflet JS + MarkerCluster + AwesomeMarkers -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.awesome-markers/2.0.5/leaflet.awesome-markers.js"></script>
 
-      function createColoredIcon(color){
-        const svg = `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='34' height='42' viewBox='0 0 34 42'><path d='M17 0C10 0 4.5 5.5 4.5 12.5 4.5 22 17 42 17 42s12.5-20 12.5-29.5C29.5 5.5 24 0 17 0z' fill='${color}' stroke='#fff' stroke-width='2'/><circle cx='17' cy='12.5' r='5' fill='#fff'/></svg>`)}`;
-        return L.icon({ iconUrl: svg, iconSize: [34,42], iconAnchor: [17,42], popupAnchor:[0,-40] });
-      }
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-storage.js";
 
-      const map = L.map('map', { zoomControl:true }).setView(centerLatLng, initialZoom);
-      const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(map);
-      const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, attribution:'Esri' });
+const firebaseConfig = {
+  apiKey: "AIzaSyDGYuI3yxJbUTc6T_0pm6WiEKZul11tXS0",
+  authDomain: "suchartwork-1487382986748.firebaseapp.com",
+  databaseURL: "https://suchartwork-1487382986748.firebaseio.com",
+  projectId: "suchartwork-1487382986748",
+  storageBucket: "suchartwork-1487382986748.firebasestorage.app",
+  messagingSenderId: "353884592527",
+  appId: "1:353884592527:web:a96e6e28d8371ba6eb13fa"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
 
-      const markersLayer = L.layerGroup().addTo(map);
-      const STORAGE_KEY='survey_points_v1';
-      function loadSurveys(){ try{ const raw=localStorage.getItem(STORAGE_KEY); return raw?JSON.parse(raw):[]; }catch(e){ return []; } }
-      function saveSurveys(arr){ localStorage.setItem(STORAGE_KEY,JSON.stringify(arr)); }
+// --- Map Setup ---
+const centerLatLng=[16.4325,102.8275], initialZoom=16;
+const map = L.map('map',{zoomControl:true}).setView(centerLatLng, initialZoom);
 
-      function humanType(t){ return { shop:'ร้านค้า/ร้านอาหาร', service:'สถานบริการ', house_open:'บ้านพักเปิด', house_closed:'บ้านพักปิด', vacant:'พื้นที่รกร้าง', empty_land:'ที่ดินเปล่า' }[t]||t; }
-      function escapeHtml(str){ if(!str) return ''; return String(str).replace(/[&<>"]+/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s])); }
+// Base maps
+const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});
 
-      function renderSurveys(){
-        markersLayer.clearLayers();
-        loadSurveys().forEach(s=>{
-          const icon=createColoredIcon(typeColors[s.type]||'#777');
-          L.marker([s.lat,s.lng],{icon,draggable:false}).addTo(markersLayer).bindPopup(`<b>${escapeHtml(s.name||'ไม่มีชื่อ')}</b><br/><small>ประเภท: ${humanType(s.type)}</small><hr style='margin:6px 0'/><div style='font-size:13px'>${escapeHtml(s.details||'')}</div>`);
-        });
-      }
-      renderSurveys();
+// WMS overlays
+const cadastralWMS = L.tileLayer.wms("http://110.164.49.68:8081/geoserver/WMSDOL/wms",{
+  layers:'WMSDOL:parcel', format:'image/png', transparent:true, attribution:'กรมที่ดิน'
+}).addTo(map);
 
-      const sheet=document.getElementById('sheet');
-      const miniMap=L.map('miniMap',{attributionControl:false,zoomControl:false}).setView(centerLatLng,initialZoom);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(miniMap);
-      let editorMarker=null;
-      function resetEditorMarker(){ if(editorMarker){miniMap.removeLayer(editorMarker); editorMarker=null;} document.getElementById('placeName').value=''; document.getElementById('details').value=''; document.getElementById('placeType').value='shop'; }
-      function placeEditorMarker(latlng){ if(editorMarker) editorMarker.setLatLng(latlng); else editorMarker=L.marker(latlng,{draggable:true}).addTo(miniMap); miniMap.setView(latlng,18); }
+const buildingsWMS = L.tileLayer.wms("http://110.164.49.68:8081/geoserver/WMSDOL/wms",{
+  layers:'WMSDOL:building', format:'image/png', transparent:true, attribution:'กรมที่ดิน'
+});
 
-      document.getElementById('openForm').addEventListener('click',()=>{sheet.classList.add('open'); sheet.setAttribute('aria-hidden','false'); setTimeout(()=>miniMap.invalidateSize(),300);});
-      document.getElementById('closeForm').addEventListener('click',()=>{sheet.classList.remove('open'); sheet.setAttribute('aria-hidden','true'); resetEditorMarker();});
-      document.getElementById('useLocation').addEventListener('click',()=>{if(!navigator.geolocation){alert('ไม่พบการสนับสนุนตำแหน่งบนอุปกรณ์นี้'); return;} navigator.geolocation.getCurrentPosition(p=>{placeEditorMarker([p.coords.latitude,p.coords.longitude]);},e=>alert('ไม่สามารถขอพิกัดได้: '+e.message),{enableHighAccuracy:true,timeout:10000});});
+// Layer Control
+const baseMaps = { "ถนน (OSM)": osm, "ภาพถ่ายดาวเทียม": satellite };
+const overlayMaps = { "แปลงที่ดิน": cadastralWMS, "อาคาร": buildingsWMS };
+L.control.layers(baseMaps, overlayMaps, {position:'topright', collapsed:true}).addTo(map);
 
-      let placeByTapMode=false;
-      document.getElementById('placeByTap').addEventListener('click',()=>{
-        placeByTapMode=!placeByTapMode;
-        document.getElementById('placeByTap').textContent=placeByTapMode?'แตะแผนที่: เปิด':'แตะแผนที่เพื่อตั้งพิกัด';
-        map.getContainer().style.cursor=placeByTapMode?'crosshair':'';
-        if(placeByTapMode) alert('แตะบนแผนที่เพื่อเลือกพิกัด (กดปุ่มอีกครั้งเพื่อยกเลิก)');
-      });
-      map.on('click',e=>{if(placeByTapMode){placeByTapMode=false; document.getElementById('placeByTap').textContent='แตะแผนที่เพื่อตั้งพิกัด'; map.getContainer().style.cursor=''; placeEditorMarker([e.latlng.lat,e.latlng.lng]); if(!sheet.classList.contains('open')){ sheet.classList.add('open'); sheet.setAttribute('aria-hidden','false'); setTimeout(()=>miniMap.invalidateSize(),300); }}});
+// Satellite toggle
+let satelliteOn=false;
+document.getElementById('toggleSatellite').addEventListener('click',()=>{
+  satelliteOn=!satelliteOn;
+  if(satelliteOn){ map.addLayer(satellite); document.getElementById('toggleSatellite').textContent='ปิดภาพถ่ายดาวเทียม'; document.getElementById('toggleSatellite').classList.remove('secondary'); }
+  else { map.removeLayer(satellite); document.getElementById('toggleSatellite').textContent='เปิดภาพถ่ายดาวเทียม'; document.getElementById('toggleSatellite').classList.add('secondary'); }
+});
 
-      document.getElementById('saveSurvey').addEventListener('click',()=>{
-        if(!editorMarker){alert('กรุณาเลือกพิกัดก่อน'); return;}
-        const name=document.getElementById('placeName').value.trim();
-        const details=document.getElementById('details').value.trim();
-        const type=document.getElementById('placeType').value;
-        const latlng=editorMarker.getLatLng();
-        const surveys=loadSurveys(); surveys.push({name,details,type,lat:latlng.lat,lng:latlng.lng,ts:Date.now()});
-        saveSurveys(surveys); renderSurveys(); resetEditorMarker(); sheet.classList.remove('open'); sheet.setAttribute('aria-hidden','true'); alert('บันทึกข้อมูลสำเร็จ');
-      });
-      document.getElementById('resetMarker').addEventListener('click',()=>resetEditorMarker());
+// MarkerCluster
+const markersCluster = L.markerClusterGroup({chunkedLoading:true});
+map.addLayer(markersCluster);
 
-      let satelliteOn=false;
-      document.getElementById('toggleSatellite').addEventListener('click',()=>{
-        satelliteOn=!satelliteOn;
-        if(satelliteOn){ map.addLayer(satellite); document.getElementById('toggleSatellite').textContent='ปิดภาพถ่ายดาวเทียม'; document.getElementById('toggleSatellite').classList.remove('secondary'); }
-        else { map.removeLayer(satellite); document.getElementById('toggleSatellite').textContent='เปิดภาพถ่ายดาวเทียม'; document.getElementById('toggleSatellite').classList.add('secondary'); }
-      });
-    });
-  </script>
+// Type color
+const typeColors={shop:'red',service:'orange',house_open:'green',house_closed:'darkgreen',vacant:'blue',empty_land:'gray'};
+function colorNameFromType(t){ return typeColors[t]||'purple'; }
+
+// Render surveys
+async function renderSurveys(searchTerm=''){
+  markersCluster.clearLayers();
+  const typeFilter = document.getElementById('filterType')?.value || '';
+  const q = query(collection(db,"surveys"), orderBy('ts','desc'));
+  const snapshot = await getDocs(q);
+  snapshot.forEach(doc=>{
+    const s=doc.data();
+    if(typeFilter && s.type!==typeFilter) return;
+    if(searchTerm && (!s.name || !s.name.toLowerCase().includes(searchTerm.toLowerCase()))) return;
+    const icon=L.AwesomeMarkers.icon({icon:'map-marker', prefix:'fa', markerColor:colorNameFromType(s.type)});
+    const m=L.marker([s.lat,s.lng],{icon});
+    let popupHtml=`<b>${s.name||'ไม่มีชื่อ'}</b><br/><small>${s.type}</small><br/>${s.details||''}<br/><small>${new Date(s.ts).toLocaleString()} | ${s.user||'ไม่ระบุ'}</small>`;
+    if(s.imageUrl) popupHtml+=`<br/><img src="${s.imageUrl}" style="width:100%;margin-top:4px;border-radius:4px;">`;
+    m.bindPopup(popupHtml);
+    markersCluster.addLayer(m);
+  });
+}
+
+// Initial render
+renderSurveys();
+
+// Filter / Search events
+document.getElementById('filterType').addEventListener('change',()=>renderSurveys(document.getElementById('searchName').value));
+document.getElementById('searchName').addEventListener('input',()=>renderSurveys(document.getElementById('searchName').value));
+
+// --- Form & MiniMap ---
+const sheet=document.getElementById('sheet');
+const openFormBtn=document.getElementById('openForm');
+const closeFormBtn=document.getElementById('closeForm');
+openFormBtn.addEventListener('click',()=>{ sheet.classList.add('open'); sheet.setAttribute('aria-hidden','false'); setTimeout(()=> miniMap.invalidateSize(),300); });
+closeFormBtn.addEventListener('click',()=>{ sheet.classList.remove('open'); sheet.setAttribute('aria-hidden','true'); resetEditorMarker(); });
+
+const miniMap=L.map('miniMap',{attributionControl:false, zoomControl:false}).setView(centerLatLng, initialZoom);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(miniMap);
+
+let editorMarker=null;
+function placeEditorMarker(latlng){ if(editorMarker) editorMarker.setLatLng(latlng); else editorMarker=L.marker(latlng,{draggable:true}).addTo(miniMap); miniMap.setView(latlng,18);}
+function resetEditorMarker(){ if(editorMarker){ miniMap.removeLayer(editorMarker); editorMarker=null; } document.getElementById('placeName').value=''; document.getElementById('details').value=''; document.getElementById('placeType').value='shop'; document.getElementById('placeImage').value='';}
+
+// Use current location
+document.getElementById('useLocation').addEventListener('click',()=>{
+  if(!navigator.geolocation){ alert('ไม่รองรับ'); return; }
+  navigator.geolocation.getCurrentPosition(pos=>placeEditorMarker([pos.coords.latitude,pos.coords.longitude]));
+});
+
+// Place marker by tap on main map
+let placeByTapMode=false;
+document.getElementById('placeByTap').addEventListener('click',()=>{
+  placeByTapMode=!placeByTapMode;
+  document.getElementById('placeByTap').textContent=placeByTapMode?'แตะแผนที่: เปิด':'แตะแผนที่เพื่อตั้งพิกัด';
+  map.getContainer().style.cursor=placeByTapMode?'crosshair':'';
+  if(placeByTapMode) alert('แตะบนแผนที่เพื่อเลือกพิกัด (กดปุ่มอีกครั้งเพื่อยกเลิก)');
+});
+map.on('click',e=>{
+  if(placeByTapMode){ placeByTapMode=false; document.getElementById('placeByTap').textContent='แตะแผนที่เพื่อตั้งพิกัด'; map.getContainer().style.cursor=''; placeEditorMarker([e.latlng.lat,e.latlng.lng]); if(!sheet.classList.contains('open')){ sheet.classList.add('open'); sheet.setAttribute('aria-hidden','false'); setTimeout(()=> miniMap.invalidateSize(),300); } }
+});
+
+// Save survey
+document.getElementById('saveSurvey').addEventListener('click', async()=>{
+  const name=document.getElementById('placeName').value.trim();
+  const details=document.getElementById('details').value.trim();
+  const type=document.getElementById('placeType').value;
+  if(!editorMarker){ alert('กรุณาเลือกพิกัด'); return; }
+  const latlng=editorMarker.getLatLng();
+  const ts=Date.now();
+
+  let imageUrl='';
+  const fileInput=document.getElementById('placeImage');
+  if(fileInput?.files.length>0){
+    const file=fileInput.files[0];
+    const storageRef=ref(storage, `survey_images/${ts}_${file.name}`);
+    await uploadBytes(storageRef,file);
+    imageUrl=await getDownloadURL(storageRef);
+  }
+
+  await addDoc(collection(db,"surveys"),{name,details,type,lat:latlng.lat,lng:latlng.lng,ts,user:'ผู้สำรวจ',imageUrl});
+  renderSurveys();
+  editorMarker.remove(); editorMarker=null;
+  sheet.classList.remove('open'); sheet.setAttribute('aria-hidden','true'); resetEditorMarker();
+});
+
+// Reset marker
+document.getElementById('resetMarker').addEventListener('click',()=>resetEditorMarker());
+</script>
 </body>
 </html>
