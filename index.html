@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>ระบบสำรวจการใช้ประโยชน์ที่ดิน</title>
+    <title>ระบบสำรวจการใช้ประโยชน์ที่ดิน (ขอนแก่น)</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
@@ -12,13 +12,67 @@
         body { margin: 0; padding: 0; font-family: 'Sarabun', sans-serif; }
         #map { height: 100vh; width: 100%; z-index: 1; }
         
-        /* ปุ่มเปิดฟอร์ม (Floating Action Button) */
+        /* --- 1. Dashboard แสดงสถิติ (Overlay) --- */
+        .stats-panel {
+            position: absolute;
+            top: 50%; /* อยู่ตรงกลางแนวตั้ง */
+            left: 10px; /* ชิดซ้าย */
+            transform: translateY(-50%);
+            width: 160px;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1000; /* อยู่บนแผนที่ แต่อยู่ใต้ Modal */
+            font-size: 14px;
+            backdrop-filter: blur(4px);
+            border: 1px solid #eee;
+        }
+
+        .stats-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 10px;
+            text-align: center;
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .stat-label { display: flex; align-items: center; gap: 6px; }
+        
+        /* จุดสีหน้าชื่อประเภท */
+        .color-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .stat-count { font-weight: bold; color: #555; }
+
+        /* Total Row Style */
+        .stat-total {
+            margin-top: 10px;
+            padding-top: 5px;
+            border-top: 1px solid #ddd;
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #007bff;
+        }
+
+        /* --- ปุ่มเปิดฟอร์ม (FAB) --- */
         .fab-btn {
             position: absolute;
             bottom: 30px;
             right: 20px;
-            width: 60px;
-            height: 60px;
+            width: 60px; height: 60px;
             background-color: #007bff;
             color: white;
             border-radius: 50%;
@@ -31,43 +85,24 @@
             border: none;
         }
 
-        /* Modal Styles */
+        /* --- Modal Styles --- */
         .modal {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
+            display: none; position: fixed; z-index: 2000;
+            left: 0; top: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
+            justify-content: center; align-items: center;
             backdrop-filter: blur(3px);
-            padding: 10px; /* กันขอบชิดจอเกินไปในมือถือ */
-            box-sizing: border-box;
+            padding: 10px; box-sizing: border-box;
         }
         .modal-content {
-            background-color: white;
-            padding: 15px;
-            border-radius: 15px;
-            width: 100%;
-            max-width: 400px;
-            max-height: 95vh;
-            overflow-y: auto;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            display: flex;
-            flex-direction: column;
+            background-color: white; padding: 15px; border-radius: 15px;
+            width: 100%; max-width: 400px; max-height: 95vh;
+            overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            display: flex; flex-direction: column;
         }
         
         /* Mini Map Style */
-        #mini-map {
-            width: 100%;
-            height: 250px; /* ความสูงแผนที่ย่อ */
-            border-radius: 8px;
-            border: 2px solid #ddd;
-            margin-bottom: 10px;
-        }
+        #mini-map { width: 100%; height: 200px; border-radius: 8px; border: 2px solid #ddd; margin-bottom: 10px; }
 
         .form-group { margin-bottom: 12px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; font-size: 14px; }
@@ -77,16 +112,8 @@
             box-sizing: border-box; font-family: 'Sarabun', sans-serif; font-size: 14px;
         }
         
-        /* Coordinate Input */
-        #latlng-input {
-            background-color: #f1f8ff;
-            color: #0056b3;
-            font-weight: bold;
-            text-align: center;
-            font-size: 12px;
-        }
+        #latlng-input { background-color: #f1f8ff; color: #0056b3; font-weight: bold; text-align: center; font-size: 12px; }
 
-        /* Buttons */
         .btn-group { display: flex; gap: 10px; margin-top: 15px; }
         .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
         .btn-primary { background-color: #007bff; color: white; }
@@ -97,7 +124,6 @@
             font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 5px;
         }
 
-        /* Popup Styling */
         .leaflet-popup-content { font-family: 'Sarabun', sans-serif; font-size: 14px; }
         .popup-header { font-weight: bold; color: #007bff; border-bottom: 1px solid #eee; margin-bottom: 5px; }
     </style>
@@ -106,16 +132,21 @@
 
     <div id="map"></div>
     
+    <div class="stats-panel" id="statsPanel">
+        <div class="stats-title">สรุปข้อมูล</div>
+        <div id="statsContent">กำลังโหลด...</div>
+    </div>
+    
     <button class="fab-btn" onclick="openForm()">+</button>
 
     <div id="modalForm" class="modal">
         <div class="modal-content">
-            <h3 style="margin: 0 0 10px 0; text-align:center;">บันทึกข้อมูล</h3>
+            <h3 style="margin: 0 0 10px 0; text-align:center;">📝 บันทึกข้อมูล</h3>
             
             <div class="form-group">
-                <label>ปักหมุดตำแหน่ง</label>
-                <div id="mini-map"></div> <input type="text" id="latlng-input" readonly value="กำลังโหลด...">
-                
+                <label>📍 ปักหมุดตำแหน่ง</label>
+                <div id="mini-map"></div>
+                <input type="text" id="latlng-input" readonly value="กำลังโหลด...">
                 <button class="btn btn-locate" onclick="getCurrentLocationForMiniMap()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
                     หาพิกัดปัจจุบัน
@@ -128,22 +159,22 @@
                     <option value="shop">ร้านค้า</option>
                     <option value="restaurant">ร้านอาหาร</option>
                     <option value="service">สถานบริการ</option>
-                    <option value="residential">บ้านพักอาศัย</option>
-                    <option value="wasteland">พื้นที่รกร้าง</option>
+                    <option value="government">สถานที่ราชการ</option> <option value="residential">บ้านพักอาศัย</option>
+                    <option value="vendor">แผงลอย</option> <option value="wasteland">พื้นที่รกร้าง</option>
                     <option value="vacant">ที่ดินเปล่า</option>
                 </select>
             </div>
 
             <div class="form-group">
                 <label>รายละเอียด</label>
-                <textarea id="details" rows="2" placeholder="เช่น ก๋วยเตี๋ยวเรือ, บ้านไม้ 2 ชั้น"></textarea>
+                <textarea id="details" rows="2" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
             </div>
 
             <div class="form-group">
                 <label>สถานะ</label>
                 <select id="status">
-                    <option value="Open">เปิดบริการ</option>
-                    <option value="Closed">เลิกกิจการ</option>
+                    <option value="Open">เปิดใช้งาน</option>
+                    <option value="Closed">ปิด/เลิกกิจการ</option>
                 </select>
             </div>
 
@@ -161,10 +192,9 @@
         const START_LAT = 16.426;
         const START_LNG = 102.835;
 
-        // --- MAIN MAP ---
+        // --- MAP SETUP ---
         const map = L.map('map', { zoomControl: false }).setView([START_LAT, START_LNG], 16);
         
-        // Layers for Main Map
         const cleanMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
             attribution: 'CartoDB', maxZoom: 20
         }).addTo(map);
@@ -176,22 +206,25 @@
         const labelMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png');
 
         L.control.layers(
-            { "แผนที่": cleanMap, "ดาวเทียม": satelliteMap }, 
+            { "แผนที่สะอาด": cleanMap, "ดาวเทียม": satelliteMap }, 
             { "ชื่อถนน": labelMap }
         ).addTo(map);
         
         L.control.zoom({ position: 'topright' }).addTo(map);
 
-        // --- VARIABLES ---
+        // --- DATA & CONFIG ---
         let allMarkers = L.layerGroup().addTo(map);
         
-        // Mini Map Variables
-        let miniMap = null;
-        let miniMarker = null;
-
-        const typeColors = {
-            'shop': '#3498db', 'restaurant': '#e67e22', 'service': '#9b59b6',
-            'residential': '#2ecc71', 'wasteland': '#7f8c8d', 'vacant': '#95a5a6'
+        // 4. ตั้งค่าสีและชื่อ รวมประเภทใหม่
+        const typeConfig = {
+            'shop':         { name: 'ร้านค้า', color: '#3498db' },       // ฟ้า
+            'restaurant':   { name: 'ร้านอาหาร', color: '#e67e22' },     // ส้ม
+            'service':      { name: 'สถานบริการ', color: '#9b59b6' },    // ม่วง
+            'government':   { name: 'สถานที่ราชการ', color: '#2c3e50' }, // น้ำเงินเข้ม (New)
+            'residential':  { name: 'บ้านพักอาศัย', color: '#2ecc71' },  // เขียว
+            'vendor':       { name: 'แผงลอย', color: '#f1c40f' },        // เหลืองทอง (New)
+            'wasteland':    { name: 'พื้นที่รกร้าง', color: '#7f8c8d' }, // เทาเข้ม
+            'vacant':       { name: 'ที่ดินเปล่า', color: '#bdc3c7' }    // เทาอ่อน
         };
 
         // --- FUNCTIONS ---
@@ -208,15 +241,37 @@
             .then(res => res.json())
             .then(data => {
                 allMarkers.clearLayers();
+                
+                // ตัวแปรสำหรับนับจำนวน
+                let stats = {};
+                let totalCount = 0;
+                
+                // เริ่มต้นตัวนับเป็น 0 ทุกประเภท
+                for (let key in typeConfig) {
+                    stats[key] = 0;
+                }
+
                 data.forEach(row => {
                     const [timestamp, lat, lng, type, details, status] = row;
+                    
                     if(!isNaN(parseFloat(lat))) {
+                        // นับจำนวน
+                        if (stats.hasOwnProperty(type)) {
+                            stats[type]++;
+                        } else {
+                            // กรณีเจอประเภทแปลกปลอม ก็นับรวมไป
+                            stats[type] = 1;
+                        }
+                        totalCount++;
+
+                        // วาดหมุด
+                        const config = typeConfig[type] || { name: type, color: 'red' };
                         const marker = L.circleMarker([lat, lng], {
-                            radius: 8, fillColor: typeColors[type] || 'red',
+                            radius: 8, fillColor: config.color,
                             color: "#fff", weight: 2, fillOpacity: 0.9
                         });
                         marker.bindPopup(`
-                            <div class="popup-header">${type}</div>
+                            <div class="popup-header">${config.name}</div>
                             <b>สถานะ:</b> ${status}<br>
                             <b>รายละเอียด:</b> ${details}<br>
                             <small style="color:gray">${formatThaiDate(timestamp)}</small>
@@ -224,38 +279,61 @@
                         allMarkers.addLayer(marker);
                     }
                 });
+
+                // 5. อัพเดท Dashboard สถิติ
+                updateStatsPanel(stats, totalCount);
             });
         }
+
+        function updateStatsPanel(stats, total) {
+            let html = '';
+            
+            // วนลูปสร้างรายการตามลำดับที่ตั้งค่าไว้ใน typeConfig
+            for (let key in typeConfig) {
+                const conf = typeConfig[key];
+                const count = stats[key] || 0;
+                
+                html += `
+                    <div class="stat-row">
+                        <div class="stat-label">
+                            <span class="color-dot" style="background-color: ${conf.color}"></span>
+                            ${conf.name}
+                        </div>
+                        <div class="stat-count">${count}</div>
+                    </div>
+                `;
+            }
+
+            // เพิ่มบรรทัดรวม (Total) ไว้ล่างสุด หรือ บนสุด ตามดีไซน์ (ในที่นี้ไว้ล่างสุดเพื่อให้ดู List ก่อน)
+            // ถ้าอยากเอา Total ไว้บรรทัดแรก ให้ย้าย block นี้ไปไว้ก่อน for loop
+            let totalHtml = `
+                <div class="stat-row stat-total">
+                    <div class="stat-label">รวมทั้งหมด</div>
+                    <div class="stat-count">${total}</div>
+                </div>
+            `;
+            
+            // เอา Total ไว้บนสุดตาม Request
+            document.getElementById('statsContent').innerHTML = totalHtml + html;
+        }
+
+        // โหลดข้อมูลเริ่มต้น
         loadData();
 
-        // --- MINI MAP LOGIC (หัวใจสำคัญของข้อนี้) ---
+        // --- MINI MAP & FORM LOGIC ---
+        let miniMap, miniMarker;
 
         function initMiniMap() {
-            // ถ้าสร้างไว้แล้ว ไม่ต้องสร้างใหม่
             if (miniMap) return;
-
-            // สร้างแผนที่เล็ก
-            miniMap = L.map('mini-map', { 
-                zoomControl: false, // ปิดปุ่มซูมเพื่อประหยัดที่
-                attributionControl: false 
-            });
-
-            // ใช้ภาพถ่ายดาวเทียมในแผนที่เล็ก เพื่อให้เห็นหลังคาบ้านชัดๆ
+            miniMap = L.map('mini-map', { zoomControl: false, attributionControl: false });
             L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(miniMap);
-            // เพิ่มเลเยอร์ชื่อถนนทับ เพื่อให้รู้ว่าอยู่ซอยไหน
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png').addTo(miniMap);
         }
 
         function openForm() {
             document.getElementById('modalForm').style.display = 'flex';
-            
-            // 1. เริ่มต้น Mini Map
             initMiniMap();
-
-            // 2. หาจุดกึ่งกลางจากแผนที่ใหญ่ หรือจุดล่าสุด
             const center = map.getCenter();
-
-            // 3. **สำคัญมาก** ต้องสั่ง invalidateSize หลังจากแสดง Modal ไม่งั้นแผนที่เทา
             setTimeout(() => {
                 miniMap.invalidateSize();
                 miniMap.setView(center, 18);
@@ -264,16 +342,9 @@
         }
 
         function updateMiniMarker(lat, lng) {
-            // ถ้ามีหมุดเก่า ลบก่อน
             if (miniMarker) miniMap.removeLayer(miniMarker);
-
-            // สร้างหมุดใหม่ที่ลากได้ (Draggable) บน Mini Map
             miniMarker = L.marker([lat, lng], { draggable: true }).addTo(miniMap);
-
-            // อัพเดทตัวเลขพิกัด
             updateInput(lat, lng);
-
-            // Event: เมื่อลากหมุดในแผนที่เล็ก
             miniMarker.on('drag', function(e) {
                 const c = e.target.getLatLng();
                 updateInput(c.lat, c.lng);
@@ -288,24 +359,14 @@
             const btn = document.querySelector('.btn-locate');
             const oldText = btn.innerHTML;
             btn.innerHTML = '⏳ กำลังค้นหา...';
-
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(p => {
-                    const lat = p.coords.latitude;
-                    const lng = p.coords.longitude;
-                    
-                    // ย้ายแผนที่เล็กไปจุดนั้น
+                    const lat = p.coords.latitude; const lng = p.coords.longitude;
                     miniMap.setView([lat, lng], 19);
                     updateMiniMarker(lat, lng);
-                    
                     btn.innerHTML = oldText;
-                }, () => {
-                    alert('หาพิกัดไม่เจอ');
-                    btn.innerHTML = oldText;
-                }, {enableHighAccuracy: true});
-            } else {
-                alert('Browser ไม่รองรับ GPS');
-            }
+                }, () => { alert('หาพิกัดไม่เจอ'); btn.innerHTML = oldText; }, {enableHighAccuracy: true});
+            } else { alert('Browser ไม่รองรับ GPS'); }
         }
 
         function closeForm() {
@@ -314,41 +375,28 @@
 
         function submitForm() {
             if (!miniMarker) return alert('กรุณาระบุพิกัด');
-            
             const latLng = miniMarker.getLatLng();
             const formData = {
-                lat: latLng.lat,
-                lng: latLng.lng,
+                lat: latLng.lat, lng: latLng.lng,
                 type: document.getElementById('placeType').value,
                 details: document.getElementById('details').value,
                 status: document.getElementById('status').value
             };
-
             const btn = document.querySelector('.btn-primary');
-            btn.innerText = 'บันทึก...';
-            btn.disabled = true;
+            btn.innerText = 'บันทึก...'; btn.disabled = true;
 
             fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
+                method: 'POST', mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
             }).then(() => {
-                alert('บันทึกสำเร็จ');
-                closeForm();
-                loadData();
+                alert('บันทึกสำเร็จ'); closeForm(); loadData();
                 document.getElementById('details').value = '';
-                btn.innerText = 'บันทึก';
-                btn.disabled = false;
-            }).catch(err => {
-                alert('Error'); 
-                btn.disabled = false;
-            });
+                btn.innerText = 'บันทึก'; btn.disabled = false;
+            }).catch(err => { alert('Error'); btn.disabled = false; });
         }
 
-        window.onclick = function(e) {
-            if (e.target == document.getElementById('modalForm')) closeForm();
-        }
+        window.onclick = function(e) { if (e.target == document.getElementById('modalForm')) closeForm(); }
     </script>
 </body>
 </html>
